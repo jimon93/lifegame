@@ -1,0 +1,18 @@
+<head>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+  <script src="./lifegame.js"></script>
+  <script>
+    $(function(){
+      $("#lifegame").LifeGame({
+        height: 50,
+        width: 100,
+        fps:10
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Life Game</h1>
+  <canvas id="lifegame"></canvas>
+</body>
+
