@@ -1,40 +1,37 @@
-log = console.log
 extend = (obj, args...)->
-  for o in args
+  for o in args when o?
     for key, val of o
       obj[key] = val
   return obj
 
 class LifeGame
-  defaults: {
-    height: 10
-    width: 10
-    fps: 10
-  }
-
-  constructor: (options)->
-    @options = extend {}, @defaults, options
-    @field = @createCellField()
-
-  createCellField: =>
-    new CellField(@options.height, @options.width, @options)
+  constructor: (@field, @visitor, @fps)->
 
   update: =>
     @field.update()
     return @
 
+  render: =>
+    if @visitor?
+      @visitor.reset()
+      @field.render(@visitor)
+      @visitor.view?()
+
   start: =>
-    @render?()
-    setInterval( (=> @update(); @render?()), 1000/@options.fps )
+    @render()
+    setInterval( (=> @update(); @render()), 1000 / @fps )
 
 class CellField
-  constructor: (@height, @width, @options)->
+  constructor: (@height, @width)->
     @cells = {}
     @rectangleEach @initCell
     @rectangleEach @randomCellLive
 
   update: =>
     cell.update() for pos, cell of @cells
+
+  render: (visitor)=>
+    cell.render(visitor) for key, cell of @cells
 
   onCellChange: (cell)=>
     diff = if cell.live then 1 else -1
@@ -52,17 +49,14 @@ class CellField
           func new Position(pos.x + dx, pos.y + dy)
 
   initCell: (pos)=>
-    @cells[pos] = @createCell(pos)
+    @cells[pos] = new Cell(pos)
     @cells[pos].changeEvents.push(@onCellChange)
 
   randomCellLive: (pos)=>
     @cells[pos].setLive(Math.random() * 3 < 1)
 
-  createCell: (pos)=>
-    new Cell(pos, @options)
-
 class Cell
-  constructor: (@pos, @options)->
+  constructor: (@pos)->
     @live = false
     @neigbor = 0
     @changeEvents = []
@@ -73,48 +67,47 @@ class Cell
       when 3 then true
       else false
 
+  render: (visitor)=>
+    visitor.visit(@)
+
   setLive: (next)=>
     if next != @live
       @live = next
       event(@) for event in @changeEvents
+
 # ==============================================================================
-class LifeGame4Console extends LifeGame
-  createCellField: =>
-    new CellField4Console(@options.height, @options.width, @options)
-
-  render: =>
-    log @field.render()
-
-class CellField4Console extends CellField
-  createCell: (pos)=>
-    new Cell4Console(pos, @options)
-
-  render: =>
-    @rectangleEach (pos) => @cells[pos].render()
-
-class Cell4Console extends Cell
-  render: =>
-    if @live then '*' else ' '
+# rendering visitor
 # ==============================================================================
-class LifeGame4Canvas extends LifeGame
-  defaults: {
-    height: 10
-    width: 10
-    fps: 50
-    cellSize: 10
-  }
+class ConsoleVisitor
+  reset: =>
+    @res = []
 
-  constructor: (options)->
-    super
-    @canvas = @setupCanvas @options.canvas
+  visit: (cell)=>
+    @res[cell.pos.y] ?= []
+    @res[cell.pos.y][cell.pos.x] = if cell.live then '*' else ' '
+
+  view: =>
+    console.log @res
+
+class CanvasVisitor
+  constructor: (canvas, @width, @height, @cellSize)->
+    @canvas = @setupCanvas canvas
     @context = @setupContext @canvas
 
-  createCellField: =>
-    new CellField4Canvas(@options.height, @options.width, @options)
+  reset: =>
+    @context.clearRect(0, 0, @canvas.width, @canvas.height)
+
+  visit: (cell)=>
+    @context.fillRect(
+      cell.pos.x * @cellSize
+      cell.pos.y * @cellSize
+      @cellSize - 1
+      @cellSize - 1
+    ) if cell.live
 
   setupCanvas: (canvas)=>
-    canvas.width  = canvas.style.width  = @options.width  * @options.cellSize
-    canvas.height = canvas.style.height = @options.height * @options.cellSize
+    canvas.width  = canvas.style.width  = @width  * @cellSize
+    canvas.height = canvas.style.height = @height * @cellSize
     canvas
 
   setupContext: (canvas)=>
@@ -122,25 +115,49 @@ class LifeGame4Canvas extends LifeGame
     context.fillStyle = "rgb(0,0,0)"
     context
 
-  render: =>
-    @context.clearRect(0, 0, @canvas.width, @canvas.height)
-    @field.render(@context)
+# ==============================================================================
+# Builder
+# ==============================================================================
+class Builder
+  defaults:
+    height: 10
+    width: 10
+    fps: 10
 
-class CellField4Canvas extends CellField
-  createCell: (pos)=>
-    new Cell4Canvas(pos, @options)
+  constructor: (options)->
+    @options =(extend {}, @defaults, options)
 
-  render: (context)=>
-    @rectangleEach (pos) => @cells[pos].render(context)
+  createField: =>
+    new CellField(@options.height, @options.width)
 
-class Cell4Canvas extends Cell
-  render: (context)=>
-    context.fillRect(
-      @pos.x * @options.cellSize
-      @pos.y * @options.cellSize
-      @options.cellSize - 1
-      @options.cellSize - 1
-    ) if @live
+  getFPS: =>
+    @options.fps
+
+class ConsoleBuilder extends Builder
+  createVisitor: =>
+    new ConsoleVisitor
+
+class CanvasBuilder extends Builder
+  defaults:
+    cellSize: 10
+
+  constructor: (@canvas, options)->
+    super(extend {}, @defaults, options)
+
+  createVisitor: =>
+    new CanvasVisitor( @canvas, @options.height, @options.width, @options.cellSize )
+
+class Director
+  constructor: (@builder)->
+
+  construct: =>
+    field = @builder.createField()
+    visitor = @builder.createVisitor()
+    fps = @builder.getFPS()
+    new LifeGame(field, visitor, fps)
+
+# ==============================================================================
+# Util
 # ==============================================================================
 class Position
   constructor: (@x, @y)->
@@ -150,14 +167,13 @@ class Position
 
 if $?
   $.fn.LifeGame = (options = {})->
-    options.canvas = @[0]
-    game = new LifeGame4Canvas( options )
+    builder = new CanvasBuilder(@[0], options)
+    director = new Director(builder)
+    game = director.construct()
     game.start()
-else
-  game = new LifeGame4Console {
-    height: 5
-    width: 10
-  }
+
+if __filename? __filename == process?.mainModule?.filename?
+  builder = new ConsoleBuilder {fps:1}
+  director = new Director(builder)
+  game = director.construct()
   game.start()
-
-
