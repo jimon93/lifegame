@@ -50,16 +50,22 @@
 
   CellField = (function() {
     function CellField(height, width) {
-      var rect;
+      var rect,
+        _this = this;
       this.height = height;
       this.width = width;
-      this.randomCellLive = __bind(this.randomCellLive, this);
-      this.initCell = __bind(this.initCell, this);
       this.render = __bind(this.render, this);
       this.update = __bind(this.update, this);
-      this.cells = {};
       rect = new Rectangle(this.height, this.width);
-      rect.list.forEach(this.initCell);
+      this.cells = rect.list.map(function(pos) {
+        return new Cell(pos);
+      }).map(function(cell) {
+        cell.live = Math.random() * 3 < 1;
+        return cell;
+      }).reduce((function(obj, cell) {
+        obj[cell.pos] = cell;
+        return obj;
+      }), {});
     }
 
     CellField.prototype.update = function() {
@@ -93,16 +99,6 @@
         _results.push(cell.render(visitor));
       }
       return _results;
-    };
-
-    CellField.prototype.initCell = function(pos) {
-      var cell;
-      this.cells[pos] = cell = new Cell(pos);
-      return this.randomCellLive(cell);
-    };
-
-    CellField.prototype.randomCellLive = function(cell) {
-      return cell.live = Math.random() * 3 < 1;
     };
 
     return CellField;

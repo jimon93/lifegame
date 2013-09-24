@@ -20,9 +20,11 @@ class LifeGame
 
 class CellField
   constructor: (@height, @width)->
-    @cells = {}
     rect = new Rectangle(@height, @width)
-    rect.list.forEach @initCell
+    @cells = rect.list
+      .map( (pos)=> new Cell(pos) )
+      .map( (cell)=> cell.live = (Math.random() * 3 < 1); cell )
+      .reduce( ((obj,cell)=> obj[cell.pos] = cell; obj), {} )
 
   update: =>
     rect = new Rectangle(3, 3)
@@ -37,13 +39,6 @@ class CellField
 
   render: (visitor)=>
     cell.render(visitor) for key, cell of @cells
-
-  initCell: (pos)=>
-    @cells[pos] = cell = new Cell(pos)
-    @randomCellLive(cell)
-
-  randomCellLive: (cell)=>
-    cell.live = (Math.random() * 3 < 1)
 
 class Cell
   constructor: (@pos)->
