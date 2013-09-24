@@ -5,7 +5,8 @@ extend = (obj, args...)->
   return obj
 
 class LifeGame
-  constructor: (@field, @visitor, @fps)->
+  constructor: (@field, @visitor)->
+    @render()
 
   update: =>
     @field.update()
@@ -16,10 +17,6 @@ class LifeGame
       @visitor.reset()
       @field.render(@visitor)
       @visitor.view?()
-
-  start: =>
-    @render()
-    setInterval( (=> @update(); @render()), 1000 / @fps )
 
 class CellField
   constructor: (@height, @width)->
@@ -116,8 +113,11 @@ class Builder
   createField: =>
     new CellField(@options.height, @options.width)
 
-  getFPS: =>
-    @options.fps
+  createGame: (field, visitor)=>
+    new LifeGame(field, visitor)
+
+  createTimer: (game)=>
+    new Timer((=>game.update().render()), @options.fps)
 
 class ConsoleBuilder extends Builder
   createVisitor: =>
@@ -137,10 +137,15 @@ class Director
   constructor: (@builder)->
 
   construct: =>
-    field = @builder.createField()
+    field   = @builder.createField()
     visitor = @builder.createVisitor()
-    fps = @builder.getFPS()
-    new LifeGame(field, visitor, fps)
+    game    = @builder.createGame(field, visitor)
+    timer   = @builder.createTimer(game)
+    {
+      update: game.update
+      render: game.update
+      start : timer.start
+    }
 
 # ==============================================================================
 # Util
@@ -161,6 +166,15 @@ class Rectangle
       for x in [0...@width]
         @list.push new Position(x, y)
 
+class Timer
+  constructor: (@func, @fps)->
+
+  start: =>
+    @id = setInterval(@func, 1000.0 / @fps)
+
+  stop: =>
+    clearInterval @id
+
 # ==============================================================================
 # Setup
 # ==============================================================================
@@ -172,7 +186,7 @@ if $?
     game.start()
 
 if __filename? and __filename == process?.mainModule?.filename
-  builder = new ConsoleBuilder { height:5, fps:1}
+  builder = new ConsoleBuilder { height:5, fps:1 }
   director = new Director(builder)
   game = director.construct()
   game.start()
