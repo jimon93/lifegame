@@ -285,8 +285,6 @@
       game = this.builder.createGame(field, visitor);
       timer = this.builder.createTimer(game);
       return {
-        update: game.update,
-        render: game.update,
         start: timer.start
       };
     };

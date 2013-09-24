@@ -137,8 +137,8 @@ class Director
     game    = @builder.createGame(field, visitor)
     timer   = @builder.createTimer(game)
     {
-      update: game.update
-      render: game.update
+      #update: game.update
+      #render: game.update
       start : timer.start
     }
 
