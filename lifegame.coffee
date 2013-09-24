@@ -24,56 +24,42 @@ class LifeGame
 class CellField
   constructor: (@height, @width)->
     @cells = {}
-    @rectangleEach @initCell
-    @rectangleEach @randomCellLive
+    rect = new Rectangle(@height, @width)
+    rect.list.forEach @initCell
 
   update: =>
-    cell.update() for pos, cell of @cells
+    rect = new Rectangle(3, 3)
+    offset = new Position(-1, -1)
+    for key, cell of @cells
+      count = rect.list
+        .map( (pos)=> pos.add(offset).add(cell.pos) )
+        .filter( (pos)=> !(pos.toString() == cell.pos.toString()) )
+        .filter( (pos)=> @cells[pos]?.live )
+        .length
+      cell.update(count)
 
   render: (visitor)=>
     cell.render(visitor) for key, cell of @cells
 
-  onCellChange: (cell)=>
-    diff = if cell.live then 1 else -1
-    @neigborEach cell.pos, (pos)=> @cells[pos]?.neigbor += diff
-
-  rectangleEach: (func)=>
-    for y in [0...@height]
-      for x in [0...@width]
-        func new Position(x, y)
-
-  neigborEach: (pos, func)=>
-    for dy in [-1..1]
-      for dx in [-1..1]
-        unless dy == 1 and dx == 1
-          func new Position(pos.x + dx, pos.y + dy)
-
   initCell: (pos)=>
-    @cells[pos] = new Cell(pos)
-    @cells[pos].changeEvents.push(@onCellChange)
+    @cells[pos] = cell = new Cell(pos)
+    @randomCellLive(cell)
 
-  randomCellLive: (pos)=>
-    @cells[pos].setLive(Math.random() * 3 < 1)
+  randomCellLive: (cell)=>
+    cell.live = (Math.random() * 3 < 1)
 
 class Cell
   constructor: (@pos)->
     @live = false
-    @neigbor = 0
-    @changeEvents = []
 
-  update: =>
-    @setLive switch @neigbor
+  update: (neigbor)=>
+    @live = switch neigbor
       when 2 then @live
       when 3 then true
       else false
 
   render: (visitor)=>
     visitor.visit(@)
-
-  setLive: (next)=>
-    if next != @live
-      @live = next
-      event(@) for event in @changeEvents
 
 # ==============================================================================
 # rendering visitor
@@ -90,7 +76,7 @@ class ConsoleVisitor
     console.log @res
 
 class CanvasVisitor
-  constructor: (canvas, @width, @height, @cellSize)->
+  constructor: (canvas, @height, @width, @cellSize)->
     @canvas = @setupCanvas canvas
     @context = @setupContext @canvas
 
@@ -162,9 +148,22 @@ class Director
 class Position
   constructor: (@x, @y)->
 
+  add: (other)=>
+    new Position(@x + other.x, @y + other.y)
+
   toString: =>
     "(#{@x}, #{@y})"
 
+class Rectangle
+  constructor: (@height, @width)->
+    @list = []
+    for y in [0...@height]
+      for x in [0...@width]
+        @list.push new Position(x, y)
+
+# ==============================================================================
+# Setup
+# ==============================================================================
 if $?
   $.fn.LifeGame = (options = {})->
     builder = new CanvasBuilder(@[0], options)
@@ -172,8 +171,8 @@ if $?
     game = director.construct()
     game.start()
 
-if __filename? __filename == process?.mainModule?.filename?
-  builder = new ConsoleBuilder {fps:1}
+if __filename? and __filename == process?.mainModule?.filename
+  builder = new ConsoleBuilder { height:5, fps:1}
   director = new Director(builder)
   game = director.construct()
   game.start()
