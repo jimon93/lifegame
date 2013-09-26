@@ -27,16 +27,19 @@
       this.visitor = visitor;
       this.render = __bind(this.render, this);
       this.update = __bind(this.update, this);
+      this.generation = 0;
       this.render();
     }
 
-    LifeGame.prototype.update = function() {
+    LifeGame.prototype.update = function(fps) {
+      this.generation++;
       this.field.update();
       return this;
     };
 
-    LifeGame.prototype.render = function() {
+    LifeGame.prototype.render = function(fps) {
       var _base;
+      console.log(fps);
       if (this.visitor != null) {
         this.visitor.reset();
         this.field.render(this.visitor);
@@ -180,7 +183,7 @@
 
     CanvasVisitor.prototype.visit = function(cell) {
       if (cell.live) {
-        return this.context.fillRect(cell.pos.x * this.cellSize, cell.pos.y * this.cellSize, this.cellSize - 1, this.cellSize - 1);
+        return this.context.fillRect(cell.pos.x * this.cellSize, cell.pos.y * this.cellSize, this.cellSize, this.cellSize);
       }
     };
 
@@ -224,10 +227,12 @@
     };
 
     Builder.prototype.createTimer = function(game) {
-      var _this = this;
-      return new Timer((function() {
-        return game.update().render();
-      }), this.options.fps);
+      var func,
+        _this = this;
+      func = function(fps) {
+        return game.update(fps).render(fps);
+      };
+      return new Timer(func, this.options.fps);
     };
 
     return Builder;
@@ -281,12 +286,9 @@
     Director.prototype.construct = function() {
       var field, game, timer, visitor;
       field = this.builder.createField();
-      visitor = this.builder.createVisitor();
+      visitor = null;
       game = this.builder.createGame(field, visitor);
-      timer = this.builder.createTimer(game);
-      return {
-        start: timer.start
-      };
+      return timer = this.builder.createTimer(game);
     };
 
     return Director;
@@ -331,19 +333,39 @@
   })();
 
   Timer = (function() {
-    function Timer(func, fps) {
+    function Timer(func, targetFPS) {
       this.func = func;
-      this.fps = fps;
+      this.targetFPS = targetFPS;
+      this.getFPS = __bind(this.getFPS, this);
+      this.getTime = __bind(this.getTime, this);
       this.stop = __bind(this.stop, this);
       this.start = __bind(this.start, this);
+      this.next = __bind(this.next, this);
+      this.prevTime = this.getTime();
     }
 
+    Timer.prototype.next = function() {
+      return this.func(this.getFPS());
+    };
+
     Timer.prototype.start = function() {
-      return this.id = setInterval(this.func, 1000.0 / this.fps);
+      return this.id = setInterval(this.next, 1000.0 / this.targetFPS);
     };
 
     Timer.prototype.stop = function() {
       return clearInterval(this.id);
+    };
+
+    Timer.prototype.getTime = function() {
+      return (new Date).getTime();
+    };
+
+    Timer.prototype.getFPS = function() {
+      var fps, nowTime;
+      nowTime = this.getTime();
+      fps = 60000.0 / (nowTime - this.prevTime);
+      this.prevTime = nowTime;
+      return fps;
     };
 
     return Timer;

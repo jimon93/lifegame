@@ -6,13 +6,17 @@ extend = (obj, args...)->
 
 class LifeGame
   constructor: (@field, @visitor)->
+    @generation = 0
     @render()
 
-  update: =>
+  update: (fps)=>
+    @generation++
     @field.update()
     return @
 
-  render: =>
+  render: (fps)=>
+    console.log fps
+    #console.log @generation
     if @visitor?
       @visitor.reset()
       @field.render(@visitor)
@@ -79,8 +83,8 @@ class CanvasVisitor
     @context.fillRect(
       cell.pos.x * @cellSize
       cell.pos.y * @cellSize
-      @cellSize - 1
-      @cellSize - 1
+      @cellSize
+      @cellSize
     ) if cell.live
 
   setupCanvas: (canvas)=>
@@ -112,7 +116,8 @@ class Builder
     new LifeGame(field, visitor)
 
   createTimer: (game)=>
-    new Timer((=>game.update().render()), @options.fps)
+    func = (fps)=> game.update(fps).render(fps)
+    new Timer(func, @options.fps)
 
 class ConsoleBuilder extends Builder
   createVisitor: =>
@@ -133,14 +138,9 @@ class Director
 
   construct: =>
     field   = @builder.createField()
-    visitor = @builder.createVisitor()
+    visitor = null #@builder.createVisitor()
     game    = @builder.createGame(field, visitor)
     timer   = @builder.createTimer(game)
-    {
-      #update: game.update
-      #render: game.update
-      start : timer.start
-    }
 
 # ==============================================================================
 # Util
@@ -162,13 +162,26 @@ class Rectangle
         @list.push new Position(x, y)
 
 class Timer
-  constructor: (@func, @fps)->
+  constructor: (@func, @targetFPS)->
+    @prevTime = @getTime()
+
+  next: =>
+    @func @getFPS()
 
   start: =>
-    @id = setInterval(@func, 1000.0 / @fps)
+    @id = setInterval(@next, 1000.0 / @targetFPS)
 
   stop: =>
     clearInterval @id
+
+  getTime: =>
+    (new Date).getTime()
+
+  getFPS: =>
+    nowTime = @getTime()
+    fps = 60000.0 / (nowTime - @prevTime)
+    @prevTime = nowTime
+    return fps
 
 # ==============================================================================
 # Setup
