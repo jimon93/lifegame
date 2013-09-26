@@ -363,7 +363,7 @@
     Timer.prototype.getFPS = function() {
       var fps, nowTime;
       nowTime = this.getTime();
-      fps = 60000.0 / (nowTime - this.prevTime);
+      fps = 1000.0 / (nowTime - this.prevTime);
       this.prevTime = nowTime;
       return fps;
     };

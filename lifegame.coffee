@@ -179,7 +179,7 @@ class Timer
 
   getFPS: =>
     nowTime = @getTime()
-    fps = 60000.0 / (nowTime - @prevTime)
+    fps = 1000.0 / (nowTime - @prevTime)
     @prevTime = nowTime
     return fps
 
