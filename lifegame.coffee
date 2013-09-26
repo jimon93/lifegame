@@ -163,7 +163,6 @@ class Rectangle
 
 class Timer
   constructor: (@func, @targetFPS)->
-    @prevTime = @getTime()
 
   next: =>
     @func @getFPS()
@@ -174,11 +173,8 @@ class Timer
   stop: =>
     clearInterval @id
 
-  getTime: =>
-    (new Date).getTime()
-
   getFPS: =>
-    nowTime = @getTime()
+    nowTime = (new Date).getTime()
     fps = 1000.0 / (nowTime - @prevTime)
     @prevTime = nowTime
     return fps

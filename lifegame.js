@@ -337,11 +337,9 @@
       this.func = func;
       this.targetFPS = targetFPS;
       this.getFPS = __bind(this.getFPS, this);
-      this.getTime = __bind(this.getTime, this);
       this.stop = __bind(this.stop, this);
       this.start = __bind(this.start, this);
       this.next = __bind(this.next, this);
-      this.prevTime = this.getTime();
     }
 
     Timer.prototype.next = function() {
@@ -356,13 +354,9 @@
       return clearInterval(this.id);
     };
 
-    Timer.prototype.getTime = function() {
-      return (new Date).getTime();
-    };
-
     Timer.prototype.getFPS = function() {
       var fps, nowTime;
-      nowTime = this.getTime();
+      nowTime = (new Date).getTime();
       fps = 1000.0 / (nowTime - this.prevTime);
       this.prevTime = nowTime;
       return fps;
