@@ -15,8 +15,7 @@ class LifeGame
     return @
 
   render: (fps)=>
-    console.log fps
-    #console.log @generation
+    console?.log fps
     if @visitor?
       @visitor.reset()
       @field.render(@visitor)
@@ -24,28 +23,37 @@ class LifeGame
 
 class CellField
   constructor: (@height, @width)->
-    rect = new Rectangle(@height, @width)
-    @cells = rect.list
-      .map( (pos)=> new Cell(pos) )
-      .map( (cell)=> cell.live = (Math.random() * 3 < 1); cell )
-      .reduce( ((obj,cell)=> obj[cell.pos] = cell; obj), {} )
+    @cells = @makeMatrix((x,y)=>(new Cell(x,y)).setRandomLive())
 
   update: =>
-    rect = new Rectangle(3, 3)
-    offset = new Position(-1, -1)
-    for key, cell of @cells
-      count = rect.list
-        .map( (pos)=> pos.add(offset).add(cell.pos) )
-        .filter( (pos)=> !(pos.toString() == cell.pos.toString()) )
-        .filter( (pos)=> @cells[pos]?.live )
-        .length
-      cell.update(count)
+    counts = @makeCountsMatrix()
+    @each (cell)=>
+      {x,y} = cell
+      cell.update counts[y][x]
 
   render: (visitor)=>
-    cell.render(visitor) for key, cell of @cells
+    @each (cell)=>
+      cell.render(visitor)
+
+  each: (func)=>
+    func(cell) for cell in line for line in @cells
+
+  makeMatrix: (init)=>
+    (init(x,y) for x in [0...@width] for y in [0...@height])
+
+
+  makeCountsMatrix: =>
+    counts = @makeMatrix(=>0)
+    @each (cell)=>
+      {x,y} = cell
+      if cell.live
+        for dy in [-1..1]
+          for dx in [-1..1] when dy != 0 or dx != 0
+            counts[y+dy][x+dx]++ if counts[y+dy]?[x+dx]?
+    return counts
 
 class Cell
-  constructor: (@pos)->
+  constructor: (@x, @y)->
     @live = false
 
   update: (neigbor)=>
@@ -57,6 +65,10 @@ class Cell
   render: (visitor)=>
     visitor.visit(@)
 
+  setRandomLive: =>
+    @live = (Math.random() * 3 < 1)
+    return @
+
 # ==============================================================================
 # rendering visitor
 # ==============================================================================
@@ -65,8 +77,8 @@ class ConsoleVisitor
     @res = []
 
   visit: (cell)=>
-    @res[cell.pos.y] ?= []
-    @res[cell.pos.y][cell.pos.x] = if cell.live then '*' else ' '
+    @res[cell.y] ?= []
+    @res[cell.y][cell.x] = if cell.live then '*' else ' '
 
   view: =>
     console.log @res
@@ -81,8 +93,8 @@ class CanvasVisitor
 
   visit: (cell)=>
     @context.fillRect(
-      cell.pos.x * @cellSize
-      cell.pos.y * @cellSize
+      cell.x * @cellSize
+      cell.y * @cellSize
       @cellSize
       @cellSize
     ) if cell.live
@@ -138,13 +150,14 @@ class Director
 
   construct: =>
     field   = @builder.createField()
-    visitor = null #@builder.createVisitor()
+    visitor = @builder.createVisitor()
     game    = @builder.createGame(field, visitor)
     timer   = @builder.createTimer(game)
 
 # ==============================================================================
 # Util
 # ==============================================================================
+###
 class Position
   constructor: (@x, @y)->
 
@@ -160,7 +173,7 @@ class Rectangle
     for y in [0...@height]
       for x in [0...@width]
         @list.push new Position(x, y)
-
+###
 class Timer
   constructor: (@func, @targetFPS)->
 
