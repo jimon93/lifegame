@@ -23,23 +23,28 @@ class LifeGame
 
 class CellField
   constructor: (@height, @width)->
+    #Cell::changeEvent = @onChanged
     @cells = @makeMatrix((x,y)=>(new Cell(x,y)).setRandomLive())
+    #@changed = []
 
   update: =>
-    #counts = @makeCountsMatrix()
     count = null
     @each (cell)=>
       {x,y} = cell
-      #cell.update counts[y][x]
       count = 0
       for dy in [-1..1]
         for dx in [-1..1] when dy != 0 or dx != 0
-          count++ if @cells[y+dy]?[x+dx]?.live
-      cell.update count
+          count++ if @cells[y+dy]?[x+dx]?.live == true
+      cell.neigbor = count
+    @each (cell)=>
+      cell.update()
 
   render: (visitor)=>
     @each (cell)=>
       cell.render(visitor)
+
+  onChanged: (cell)=>
+    @chenged.push cell
 
   each: (func)=>
     func(cell) for cell in line for line in @cells
@@ -47,27 +52,19 @@ class CellField
   makeMatrix: (init)=>
     (init(x,y) for x in [0...@width] for y in [0...@height])
 
-
-  makeCountsMatrix: =>
-    counts = @makeMatrix(=>0)
-    @each (cell)=>
-      {x,y} = cell
-      if cell.live
-        for dy in [-1..1]
-          for dx in [-1..1] when dy != 0 or dx != 0
-            counts[y+dy][x+dx]++ if @cells[y+dy]?[x+dx]?.live
-    return counts
-
-
 class Cell
   constructor: (@x, @y)->
     @live = false
+    @prevLive = @live
+    @neigbor = 0
 
-  update: (neigbor)=>
-    @live = switch neigbor
+  update: =>
+    @prevLive = @live
+    @live = switch @neigbor
       when 2 then @live
       when 3 then true
       else false
+    @changeEvent?(@) if @live != @prevLive
 
   render: (visitor)=>
     visitor.visit(@)
@@ -164,23 +161,6 @@ class Director
 # ==============================================================================
 # Util
 # ==============================================================================
-###
-class Position
-  constructor: (@x, @y)->
-
-  add: (other)=>
-    new Position(@x + other.x, @y + other.y)
-
-  toString: =>
-    "(#{@x}, #{@y})"
-
-class Rectangle
-  constructor: (@height, @width)->
-    @list = []
-    for y in [0...@height]
-      for x in [0...@width]
-        @list.push new Position(x, y)
-###
 class Timer
   constructor: (@func, @targetFPS)->
 

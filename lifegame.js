@@ -58,9 +58,9 @@
       var _this = this;
       this.height = height;
       this.width = width;
-      this.makeCountsMatrix = __bind(this.makeCountsMatrix, this);
       this.makeMatrix = __bind(this.makeMatrix, this);
       this.each = __bind(this.each, this);
+      this.onChanged = __bind(this.onChanged, this);
       this.render = __bind(this.render, this);
       this.update = __bind(this.update, this);
       this.cells = this.makeMatrix(function(x, y) {
@@ -72,20 +72,23 @@
       var count,
         _this = this;
       count = null;
-      return this.each(function(cell) {
+      this.each(function(cell) {
         var dx, dy, x, y, _i, _j, _ref, _ref1;
         x = cell.x, y = cell.y;
         count = 0;
         for (dy = _i = -1; _i <= 1; dy = ++_i) {
           for (dx = _j = -1; _j <= 1; dx = ++_j) {
             if (dy !== 0 || dx !== 0) {
-              if ((_ref = _this.cells[y + dy]) != null ? (_ref1 = _ref[x + dx]) != null ? _ref1.live : void 0 : void 0) {
+              if (((_ref = _this.cells[y + dy]) != null ? (_ref1 = _ref[x + dx]) != null ? _ref1.live : void 0 : void 0) === true) {
                 count++;
               }
             }
           }
         }
-        return cell.update(count);
+        return cell.neigbor = count;
+      });
+      return this.each(function(cell) {
+        return cell.update();
       });
     };
 
@@ -94,6 +97,10 @@
       return this.each(function(cell) {
         return cell.render(visitor);
       });
+    };
+
+    CellField.prototype.onChanged = function(cell) {
+      return this.chenged.push(cell);
     };
 
     CellField.prototype.each = function(func) {
@@ -131,39 +138,6 @@
       return _results;
     };
 
-    CellField.prototype.makeCountsMatrix = function() {
-      var counts,
-        _this = this;
-      counts = this.makeMatrix(function() {
-        return 0;
-      });
-      this.each(function(cell) {
-        var dx, dy, x, y, _i, _results;
-        x = cell.x, y = cell.y;
-        if (cell.live) {
-          _results = [];
-          for (dy = _i = -1; _i <= 1; dy = ++_i) {
-            _results.push((function() {
-              var _j, _ref, _ref1, _results1;
-              _results1 = [];
-              for (dx = _j = -1; _j <= 1; dx = ++_j) {
-                if (dy !== 0 || dx !== 0) {
-                  if ((_ref = this.cells[y + dy]) != null ? (_ref1 = _ref[x + dx]) != null ? _ref1.live : void 0 : void 0) {
-                    _results1.push(counts[y + dy][x + dx]++);
-                  } else {
-                    _results1.push(void 0);
-                  }
-                }
-              }
-              return _results1;
-            }).call(_this));
-          }
-          return _results;
-        }
-      });
-      return counts;
-    };
-
     return CellField;
 
   })();
@@ -176,11 +150,14 @@
       this.render = __bind(this.render, this);
       this.update = __bind(this.update, this);
       this.live = false;
+      this.prevLive = this.live;
+      this.neigbor = 0;
     }
 
-    Cell.prototype.update = function(neigbor) {
-      return this.live = (function() {
-        switch (neigbor) {
+    Cell.prototype.update = function() {
+      this.prevLive = this.live;
+      this.live = (function() {
+        switch (this.neigbor) {
           case 2:
             return this.live;
           case 3:
@@ -189,6 +166,9 @@
             return false;
         }
       }).call(this);
+      if (this.live !== this.prevLive) {
+        return typeof this.changeEvent === "function" ? this.changeEvent(this) : void 0;
+      }
     };
 
     Cell.prototype.render = function(visitor) {
@@ -361,25 +341,6 @@
     return Director;
 
   })();
-
-  /*
-  class Position
-    constructor: (@x, @y)->
-  
-    add: (other)=>
-      new Position(@x + other.x, @y + other.y)
-  
-    toString: =>
-      "(#{@x}, #{@y})"
-  
-  class Rectangle
-    constructor: (@height, @width)->
-      @list = []
-      for y in [0...@height]
-        for x in [0...@width]
-          @list.push new Position(x, y)
-  */
-
 
   Timer = (function() {
     function Timer(func, targetFPS) {
