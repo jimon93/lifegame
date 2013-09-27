@@ -69,13 +69,23 @@
     }
 
     CellField.prototype.update = function() {
-      var counts,
+      var count,
         _this = this;
-      counts = this.makeCountsMatrix();
+      count = null;
       return this.each(function(cell) {
-        var x, y;
+        var dx, dy, x, y, _i, _j, _ref, _ref1;
         x = cell.x, y = cell.y;
-        return cell.update(counts[y][x]);
+        count = 0;
+        for (dy = _i = -1; _i <= 1; dy = ++_i) {
+          for (dx = _j = -1; _j <= 1; dx = ++_j) {
+            if (dy !== 0 || dx !== 0) {
+              if ((_ref = _this.cells[y + dy]) != null ? (_ref1 = _ref[x + dx]) != null ? _ref1.live : void 0 : void 0) {
+                count++;
+              }
+            }
+          }
+        }
+        return cell.update(count);
       });
     };
 
@@ -134,11 +144,11 @@
           _results = [];
           for (dy = _i = -1; _i <= 1; dy = ++_i) {
             _results.push((function() {
-              var _j, _ref, _results1;
+              var _j, _ref, _ref1, _results1;
               _results1 = [];
               for (dx = _j = -1; _j <= 1; dx = ++_j) {
                 if (dy !== 0 || dx !== 0) {
-                  if (((_ref = counts[y + dy]) != null ? _ref[x + dx] : void 0) != null) {
+                  if ((_ref = this.cells[y + dy]) != null ? (_ref1 = _ref[x + dx]) != null ? _ref1.live : void 0 : void 0) {
                     _results1.push(counts[y + dy][x + dx]++);
                   } else {
                     _results1.push(void 0);
@@ -146,7 +156,7 @@
                 }
               }
               return _results1;
-            })());
+            }).call(_this));
           }
           return _results;
         }

@@ -26,10 +26,16 @@ class CellField
     @cells = @makeMatrix((x,y)=>(new Cell(x,y)).setRandomLive())
 
   update: =>
-    counts = @makeCountsMatrix()
+    #counts = @makeCountsMatrix()
+    count = null
     @each (cell)=>
       {x,y} = cell
-      cell.update counts[y][x]
+      #cell.update counts[y][x]
+      count = 0
+      for dy in [-1..1]
+        for dx in [-1..1] when dy != 0 or dx != 0
+          count++ if @cells[y+dy]?[x+dx]?.live
+      cell.update count
 
   render: (visitor)=>
     @each (cell)=>
@@ -49,8 +55,9 @@ class CellField
       if cell.live
         for dy in [-1..1]
           for dx in [-1..1] when dy != 0 or dx != 0
-            counts[y+dy][x+dx]++ if counts[y+dy]?[x+dx]?
+            counts[y+dy][x+dx]++ if @cells[y+dy]?[x+dx]?.live
     return counts
+
 
 class Cell
   constructor: (@x, @y)->
@@ -95,8 +102,8 @@ class CanvasVisitor
     @context.fillRect(
       cell.x * @cellSize
       cell.y * @cellSize
-      @cellSize
-      @cellSize
+      @cellSize #- 1
+      @cellSize #- 1
     ) if cell.live
 
   setupCanvas: (canvas)=>
